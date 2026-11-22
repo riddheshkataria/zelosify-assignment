@@ -56,37 +56,41 @@ export function middleware(request) {
     return response;
   }
 
-  // Redirect logged in users away from public pages except during registration
-  if (isPublicPath && isAuthenticated) {
-    // Role-based redirection
-    console.log("User Role = ", userRole);
-    switch (userRole) {
-      case "VENDOR_MANAGER":
-        console.log(`Redirecting VENDOR_MANAGER to /user`);
-        return NextResponse.redirect(new URL("/user", request.url));
-
-      case "BUSINESS_USER":
-        console.log(
-          `Redirecting BUSINESS_USER to /business-user/digital-initiative`
-        );
-        return NextResponse.redirect(
-          new URL("/business-user/digital-initiative", request.url)
-        );
-
-      case "IT_VENDOR":
-        console.log(`Redirecting IT_VENDOR to /vendor/payments`);
-        return NextResponse.redirect(new URL("/vendor/payments", request.url));
-
-      default:
-        // Fallback for unknown roles or missing role - redirect to base user page
-        console.log(`Unknown role (${userRole}) - redirecting to /`);
-        return NextResponse.redirect(new URL("/", request.url));
-    }
-  }
-
   // Redirect unauthenticated users to login page
   if (!isPublicPath && !isAuthenticated) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Role-based home routes
+  const getRoleHome = (role) => {
+    switch (role) {
+      case "VENDOR_MANAGER":
+        return "/user";
+      case "BUSINESS_USER":
+        return "/business-user/digital-initiative";
+      case "IT_VENDOR":
+        return "/vendor/openings";
+      case "HIRING_MANAGER":
+        return "/hiring-manager/openings";
+      default:
+        return "/";
+    }
+  };
+
+  // Redirect logged in users away from public pages except during registration
+  if (isPublicPath && isAuthenticated) {
+    const targetUrl = getRoleHome(userRole);
+    return NextResponse.redirect(new URL(targetUrl, request.url));
+  }
+
+  // Strict RBAC route guards for protected zones
+  if (isAuthenticated && userRole) {
+    if (path.startsWith("/hiring-manager") && userRole !== "HIRING_MANAGER") {
+      return NextResponse.redirect(new URL(getRoleHome(userRole), request.url));
+    }
+    if (path.startsWith("/vendor") && userRole !== "IT_VENDOR") {
+      return NextResponse.redirect(new URL(getRoleHome(userRole), request.url));
+    }
   }
 
   return response;
@@ -98,6 +102,7 @@ export const config = {
     // Protected routes
     "/user/:path*",
     "/vendor/:path*",
+    "/hiring-manager/:path*",
     "/business-user/:path*",
 
     // Public paths for redirect logic
