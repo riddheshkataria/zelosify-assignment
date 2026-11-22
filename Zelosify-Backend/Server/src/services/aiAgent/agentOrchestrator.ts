@@ -6,6 +6,7 @@ import {
   AgentRecommendationOutput,
   SchemaValidator,
   DeterministicScoreResult,
+  ParsedResumeSchema,
 } from "./schemaValidator.js";
 import {
   TOOL_DECLARATIONS,
