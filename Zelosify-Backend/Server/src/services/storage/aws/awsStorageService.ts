@@ -133,7 +133,7 @@ export class AwsStorageService extends StorageService {
     }
   }
 
-  async getUploadURL(key: string): Promise<string> {
+  async getUploadURL(key: string, contentType?: string): Promise<string> {
     try {
       console.log("[AWS S3] Generating upload URL for:", {
         bucket: this.bucket,
@@ -141,10 +141,25 @@ export class AwsStorageService extends StorageService {
         region: process.env.S3_AWS_REGION,
       });
 
+      // Infer appropriate content type for PDF, PPTX or binary files
+      let resolvedContentType = contentType;
+      if (!resolvedContentType) {
+        const ext = key.split(".").pop()?.toLowerCase();
+        if (ext === "pdf") {
+          resolvedContentType = "application/pdf";
+        } else if (ext === "pptx") {
+          resolvedContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        } else if (ext === "ppt") {
+          resolvedContentType = "application/vnd.ms-powerpoint";
+        } else {
+          resolvedContentType = "application/octet-stream";
+        }
+      }
+
       const command = new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        ContentType: "application/pdf",
+        ContentType: resolvedContentType,
       });
 
       const url = await getSignedUrl(this.s3Client, command, {

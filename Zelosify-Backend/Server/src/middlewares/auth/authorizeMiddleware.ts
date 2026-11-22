@@ -6,7 +6,7 @@ import { isValidRole } from "../../utils/RBAC/isValidRole.js";
 
 const publicKey = formatPublicKey(process.env.KEYCLOAK_RS256_SIG);
 
-export function authorizeRole(requiredrole: string) {
+export function authorizeRole(requiredrole: string | string[]) {
   return async (
     req: AuthenticatedRequest,
     res: Response,
@@ -20,10 +20,14 @@ export function authorizeRole(requiredrole: string) {
       return;
     }
 
-    // Validate the provided role
-    if (!isValidRole(requiredrole)) {
-      res.status(400).json({ message: "Invalid role provided." });
-      return;
+    const rolesToCheck = Array.isArray(requiredrole) ? requiredrole : [requiredrole];
+
+    // Validate the provided role(s)
+    for (const role of rolesToCheck) {
+      if (!isValidRole(role)) {
+        res.status(400).json({ message: `Invalid role provided: ${role}` });
+        return;
+      }
     }
 
     // Validate public key
@@ -44,13 +48,19 @@ export function authorizeRole(requiredrole: string) {
           });
         }
 
-        const role = decoded.realm_access?.roles || [];
-        if (!role.includes(requiredrole)) {
+        const tokenRoles: string[] = (decoded as any).realm_access?.roles || [];
+        const userDbRole = req.user?.role;
+
+        const hasRole = rolesToCheck.some(
+          (role) => tokenRoles.includes(role) || userDbRole === role
+        );
+
+        if (!hasRole) {
           return res.status(403).json({
-            message: `Access Denied: User does not have required role ${requiredrole}`,
+            message: `Access Denied: User does not have required role(s): ${rolesToCheck.join(", ")}`,
           });
         }
-        console.log("Authorize Role Middleware Passed ✅ : ", req.user);
+        console.log("Authorize Role Middleware Passed ✅ : ", req.user || decoded);
         next();
       }
     );
