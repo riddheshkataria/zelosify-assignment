@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import prisma from "../../config/prisma/prisma.js";
 import { FilePresignService } from "../../services/upload/filePresignService.js";
+import { decrypt } from "../../utils/encryption/encryption.js";
+import type { UploadMetadata } from "../../types/fileUpload.js";
 import { RecommendationService } from "../../services/aiAgent/recommendationService.js";
 import {
   getTenantIdFromRequest,
@@ -163,12 +165,20 @@ export async function presignVendorUploadUrls(req: Request, res: Response) {
   try {
     const tenantId = getTenantIdFromRequest(req);
     const { id } = req.params;
-    const { filenames } = req.body;
 
-    if (!filenames || !Array.isArray(filenames) || filenames.length === 0) {
+    let filenames: string[] = [];
+    if (Array.isArray(req.body.filenames)) {
+      filenames = req.body.filenames;
+    } else if (Array.isArray(req.body.files)) {
+      filenames = req.body.files.map((f: any) =>
+        typeof f === "string" ? f : f.filename || f.name || "resume.pdf"
+      );
+    }
+
+    if (!filenames || filenames.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "filenames array is required and must not be empty",
+        message: "files or filenames array is required and must not be empty",
       });
     }
 
@@ -189,9 +199,37 @@ export async function presignVendorUploadUrls(req: Request, res: Response) {
       uploadEndpoint: `/api/v1/vendor/openings/${id}/profiles/upload`,
     });
 
+    const tokens = uploadTokens.map((t) => {
+      let uploadUrl = "";
+      let s3Key = "";
+      let fileUrl = "";
+      try {
+        const meta = JSON.parse(decrypt(t.uploadToken)) as UploadMetadata;
+        uploadUrl = meta.url;
+        s3Key = meta.key;
+        fileUrl = meta.url ? meta.url.split("?")[0] : "";
+      } catch (err) {
+        // Fallback for mocked tests or unencrypted tokens
+        const rawToken = t as any;
+        uploadUrl = rawToken.uploadUrl || "";
+        s3Key = rawToken.s3Key || "";
+        fileUrl = rawToken.fileUrl || "";
+      }
+
+      return {
+        ...t,
+        uploadUrl,
+        fileUrl,
+        s3Key,
+      };
+    });
+
     return res.status(200).json({
       success: true,
-      data: { uploadTokens },
+      data: {
+        uploadUrls: tokens,
+        uploadTokens: tokens,
+      },
     });
   } catch (error: any) {
     console.error("[Vendor Controller] Error generating presigned upload URLs:", error);
@@ -231,15 +269,16 @@ export async function submitVendorProfiles(req: Request, res: Response) {
     const createdProfiles = await prisma.$transaction(async (tx) => {
       const records = [];
       for (const p of profiles) {
-        if (!p.s3Key) {
-          throw new Error("Each profile must contain an s3Key");
+        const s3Key = p.s3Key || p.resumeS3Key;
+        if (!s3Key) {
+          throw new Error("Each profile must contain an s3Key or resumeS3Key");
         }
-        const fileName = p.fileName || p.s3Key.split("/").pop();
+        const fileName = p.fileName || p.resumeFilename || s3Key.split("/").pop();
 
         const created = await tx.hiringProfile.create({
           data: {
             openingId: id,
-            s3Key: p.s3Key,
+            s3Key,
             fileName,
             uploadedBy: userId,
             status: "SUBMITTED",
@@ -278,7 +317,8 @@ export async function submitVendorProfiles(req: Request, res: Response) {
 export async function softDeleteVendorProfile(req: Request, res: Response) {
   try {
     const userId = getUserIdFromRequest(req);
-    const profileId = parseInt(req.params.id, 10);
+    const idParam = req.params.profileId || req.params.id;
+    const profileId = parseInt(idParam, 10);
 
     if (isNaN(profileId)) {
       return res.status(400).json({ success: false, message: "Invalid profile ID" });

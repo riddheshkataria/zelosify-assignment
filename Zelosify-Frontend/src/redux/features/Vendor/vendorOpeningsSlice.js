@@ -196,7 +196,9 @@ const vendorOpeningsSlice = createSlice({
       })
       .addCase(submitVendorProfiles.fulfilled, (state, action) => {
         state.isSubmitting = false;
-        const newProfiles = action.payload.data?.profiles || [];
+        const newProfiles = Array.isArray(action.payload.data)
+          ? action.payload.data
+          : action.payload.data?.profiles || [];
         // Append newly created profiles
         state.uploadedProfiles = [...state.uploadedProfiles, ...newProfiles];
         state.successMessage =
