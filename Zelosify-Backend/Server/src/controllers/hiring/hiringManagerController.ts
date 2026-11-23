@@ -102,10 +102,31 @@ export async function getOpeningProfiles(req: Request, res: Response) {
         badge = "NOT_RECOMMENDED";
       }
 
+      // Extract metadata if saved in reasoningMetadata or fallback to fileName
+      const meta = (p.reasoningMetadata && typeof p.reasoningMetadata === "object" && !Array.isArray(p.reasoningMetadata))
+        ? (p.reasoningMetadata as Record<string, any>)
+        : {};
+
+      const rawFileName = p.fileName || p.s3Key.split("/").pop() || "Candidate";
+      const cleanCandidateName = meta.candidateName || rawFileName
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[-_](resume|cv|general|profile|final).*/i, "")
+        .replace(/[_-]/g, " ")
+        .trim() || `Candidate #${p.id}`;
+
+      const cleanCandidateEmail = meta.candidateEmail || `${cleanCandidateName.toLowerCase().replace(/\s+/g, ".")}@candidate.zelosify.com`;
+      const experienceYears = meta.experienceYears ?? opening.experienceMin ?? 3;
+      const keySkills = meta.keySkills && Array.isArray(meta.keySkills) && meta.keySkills.length > 0
+        ? meta.keySkills
+        : ["TypeScript", "Node.js", "React"];
+
+      const scorePct = p.recommendationScore !== null ? Number((p.recommendationScore * 100).toFixed(0)) : null;
+      const confPct = p.recommendationConfidence !== null ? Number((p.recommendationConfidence * 100).toFixed(0)) : null;
+
       return {
         id: p.id,
         openingId: p.openingId,
-        fileName: p.fileName || p.s3Key.split("/").pop(),
+        fileName: rawFileName,
         s3Key: p.s3Key,
         uploadedBy: p.uploadedBy,
         submittedAt: p.submittedAt,
@@ -114,16 +135,25 @@ export async function getOpeningProfiles(req: Request, res: Response) {
         shortlistedAt: p.shortlistedAt,
         rejectedBy: p.rejectedBy,
         rejectedAt: p.rejectedAt,
-        // AI Recommendation Fields
+        // Candidate profile details
+        candidateName: cleanCandidateName,
+        candidateEmail: cleanCandidateEmail,
+        experienceYears,
+        keySkills,
+        // AI Recommendation Fields (compatible with both property conventions)
         recommendationBadge: badge,
         recommended: p.recommended,
-        score: p.recommendationScore !== null ? Number((p.recommendationScore * 100).toFixed(0)) : null,
+        score: scorePct,
         rawScore: p.recommendationScore,
-        confidence: p.recommendationConfidence !== null ? Number((p.recommendationConfidence * 100).toFixed(0)) : null,
+        confidence: confPct,
         rawConfidence: p.recommendationConfidence,
         explanation: p.recommendationReason || "Pending AI evaluation",
         latencyMs: p.recommendationLatencyMs,
         recommendedAt: p.recommendedAt,
+        recommendationScore: p.recommendationScore,
+        recommendationConfidence: p.recommendationConfidence,
+        recommendationReason: p.recommendationReason || "Pending AI evaluation",
+        recommendationLatencyMs: p.recommendationLatencyMs,
       };
     });
 

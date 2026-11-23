@@ -275,6 +275,13 @@ export async function submitVendorProfiles(req: Request, res: Response) {
         }
         const fileName = p.fileName || p.resumeFilename || s3Key.split("/").pop();
 
+        const meta = {
+          candidateName: p.candidateName || null,
+          candidateEmail: p.candidateEmail || null,
+          experienceYears: p.experienceYears ?? null,
+          keySkills: p.keySkills || null,
+        };
+
         const created = await tx.hiringProfile.create({
           data: {
             openingId: id,
@@ -282,6 +289,7 @@ export async function submitVendorProfiles(req: Request, res: Response) {
             fileName,
             uploadedBy: userId,
             status: "SUBMITTED",
+            reasoningMetadata: meta,
           },
         });
         records.push(created);

@@ -160,6 +160,18 @@ export class AgentOrchestrator {
 
     // 6. Persist within an ACID Prisma Transaction
     await prisma.$transaction(async (tx) => {
+      const current = await tx.hiringProfile.findUnique({
+        where: { id: profileId },
+        select: { reasoningMetadata: true },
+      });
+      const existingMeta = (current?.reasoningMetadata && typeof current.reasoningMetadata === "object" && !Array.isArray(current.reasoningMetadata))
+        ? current.reasoningMetadata
+        : {};
+      const mergedMeta = {
+        ...(existingMeta as object),
+        agentReasoning: intermediateReasoning,
+      };
+
       await tx.hiringProfile.update({
         where: { id: profileId },
         data: {
@@ -170,7 +182,7 @@ export class AgentOrchestrator {
           recommendationLatencyMs: totalLatencyMs,
           recommendationVersion: "v1.0",
           recommendedAt: new Date(),
-          reasoningMetadata: intermediateReasoning,
+          reasoningMetadata: mergedMeta,
           tokenUsage: tokenUsage as any,
         },
       });
