@@ -67,8 +67,10 @@ export const authenticateUser = async (
         return next();
       }
 
-      const user = await prisma.user.findUnique({
-        where: { externalId: verified.sub },
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ externalId: verified.sub }, { id: verified.sub }],
+        },
         select: {
           id: true,
           username: true,

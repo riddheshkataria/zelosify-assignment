@@ -83,6 +83,8 @@ async function startServer() {
     // Hiring manager routes
     app.use("/api/v1/hiring-manager", hiringManagerRoutes);
     app.use("/api/hiring-manager", hiringManagerRoutes);
+    app.use("/api/v1/hiring", hiringManagerRoutes);
+    app.use("/api/hiring", hiringManagerRoutes);
 
     // Request debugging middleware - logs all incoming requests
     app.use((req, _, next) => {
