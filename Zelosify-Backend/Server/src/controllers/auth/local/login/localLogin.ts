@@ -97,7 +97,7 @@ export const verifyLogin = async (
         res.cookie("access_token", access_token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
+          sameSite: "lax",
           maxAge: 4 * 3600 * 1000, // 4 hours
           path: "/",
         });
@@ -106,7 +106,7 @@ export const verifyLogin = async (
         res.cookie("refresh_token", refresh_token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
+          sameSite: "lax",
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
           path: "/",
         });

@@ -84,7 +84,7 @@ export const verifyTOTP = async (
       res.cookie("access_token", tokenResponse.data.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 4 * 3600 * 1000, // 4 hours
         path: "/",
       });
@@ -92,7 +92,7 @@ export const verifyTOTP = async (
       res.cookie("refresh_token", tokenResponse.data.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: "/",
       });
