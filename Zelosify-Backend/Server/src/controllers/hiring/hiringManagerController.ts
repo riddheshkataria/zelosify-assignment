@@ -320,3 +320,152 @@ export async function getProfilePreviewUrl(req: Request, res: Response) {
     });
   }
 }
+
+/**
+ * 6. Create a New Contract Opening
+ * POST /api/v1/hiring-manager/openings
+ */
+export async function createOpening(req: Request, res: Response) {
+  try {
+    const tenantId = getTenantIdFromRequest(req);
+    const userId = getUserIdFromRequest(req);
+    const { title, description, location, contractType, experienceMin, experienceMax } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: "Opening title is required" });
+    }
+
+    const created = await prisma.opening.create({
+      data: {
+        tenantId,
+        hiringManagerId: userId,
+        title: title.trim(),
+        description: description ? description.trim() : "",
+        location: location ? location.trim() : "Remote",
+        contractType: contractType || "C2C",
+        experienceMin: Number(experienceMin) || 3,
+        experienceMax: experienceMax ? Number(experienceMax) : null,
+        status: "OPEN",
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Contract opening created successfully",
+      data: created,
+    });
+  } catch (error: any) {
+    console.error("[Hiring Manager Controller] Error creating opening:", error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to create contract opening",
+    });
+  }
+}
+
+/**
+ * 7. Update an Existing Contract Opening (Status, details)
+ * PUT/PATCH /api/v1/hiring-manager/openings/:id
+ */
+export async function updateOpening(req: Request, res: Response) {
+  try {
+    const tenantId = getTenantIdFromRequest(req);
+    const userId = getUserIdFromRequest(req);
+    const { id } = req.params;
+    const { title, description, location, contractType, experienceMin, experienceMax, status } = req.body;
+
+    const opening = await prisma.opening.findUnique({ where: { id } });
+    if (!opening) {
+      return res.status(404).json({ success: false, message: "Opening not found" });
+    }
+
+    assertTenantOwnership(tenantId, opening.tenantId, "Opening");
+    assertHiringManagerOwnership(userId, opening.hiringManagerId);
+
+    const dataToUpdate: any = {};
+    if (title !== undefined) dataToUpdate.title = title.trim();
+    if (description !== undefined) dataToUpdate.description = description.trim();
+    if (location !== undefined) dataToUpdate.location = location.trim();
+    if (contractType !== undefined) dataToUpdate.contractType = contractType;
+    if (experienceMin !== undefined) dataToUpdate.experienceMin = Number(experienceMin);
+    if (experienceMax !== undefined) dataToUpdate.experienceMax = Number(experienceMax);
+    if (status !== undefined) dataToUpdate.status = status;
+
+    const updated = await prisma.opening.update({
+      where: { id },
+      data: dataToUpdate,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Contract opening updated successfully",
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error("[Hiring Manager Controller] Error updating opening:", error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to update contract opening",
+    });
+  }
+}
+
+/**
+ * 8. Fetch All Incoming Candidate Applications Across All Openings
+ * GET /api/v1/hiring-manager/applications
+ */
+export async function getAllManagerApplications(req: Request, res: Response) {
+  try {
+    const tenantId = getTenantIdFromRequest(req);
+    const userId = getUserIdFromRequest(req);
+
+    const openings = await prisma.opening.findMany({
+      where: { tenantId, hiringManagerId: userId },
+      select: { id: true, title: true, contractType: true },
+    });
+
+    const openingIds = openings.map((o) => o.id);
+    const openingMap = new Map(openings.map((o) => [o.id, o]));
+
+    const profiles = await prisma.hiringProfile.findMany({
+      where: { openingId: { in: openingIds }, isDeleted: false },
+      orderBy: { submittedAt: "desc" },
+    });
+
+    const formatted = profiles.map((p) => {
+      const op = openingMap.get(p.openingId);
+      const rawFileName = p.fileName || p.s3Key.split("/").pop() || "Candidate";
+      const cleanCandidateName = rawFileName
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[-_](resume|cv|general|profile|final).*/i, "")
+        .replace(/[_-]/g, " ")
+        .trim() || `Candidate #${p.id}`;
+
+      return {
+        id: p.id,
+        openingId: p.openingId,
+        openingTitle: op?.title || "Contract Opening",
+        contractType: op?.contractType || "Contract",
+        fileName: rawFileName,
+        candidateName: cleanCandidateName,
+        candidateEmail: `${cleanCandidateName.toLowerCase().replace(/\s+/g, ".")}@candidate.zelosify.com`,
+        status: p.status,
+        submittedAt: p.submittedAt,
+        score: p.recommendationScore !== null ? Math.round(p.recommendationScore * 100) : null,
+        recommendationScore: p.recommendationScore,
+        recommended: p.recommended,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error("[Hiring Manager Controller] Error fetching applications:", error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to fetch candidate applications",
+    });
+  }
+}

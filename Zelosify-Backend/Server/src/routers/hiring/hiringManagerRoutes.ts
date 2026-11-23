@@ -7,6 +7,9 @@ import {
   shortlistProfile,
   rejectProfile,
   getProfilePreviewUrl,
+  createOpening,
+  updateOpening,
+  getAllManagerApplications,
 } from "../../controllers/hiring/hiringManagerController.js";
 import { fetchData } from "../../controllers/controllers.js";
 
@@ -16,8 +19,14 @@ const router = Router();
 router.use(authenticateUser as RequestHandler);
 router.use(authorizeRole("HIRING_MANAGER") as RequestHandler);
 
-// 1. Fetch Openings assigned to logged-in manager
+// 1. Fetch Openings assigned to logged-in manager & Create new contract opening
 router.get("/openings", getManagerOpenings as unknown as RequestHandler);
+router.post("/openings", createOpening as unknown as RequestHandler);
+router.put("/openings/:id", updateOpening as unknown as RequestHandler);
+router.patch("/openings/:id", updateOpening as unknown as RequestHandler);
+
+// 1b. Fetch all applications across all contracts for manager
+router.get("/applications", getAllManagerApplications as unknown as RequestHandler);
 
 // 2. Fetch Profiles for a specific opening
 router.get("/openings/:id/profiles", getOpeningProfiles as unknown as RequestHandler);

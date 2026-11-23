@@ -12,6 +12,10 @@ const CLIENT_SECRET_TTL = 3600 * 1000; // 1 hour
 
 export async function getKeycloakClientSecret(): Promise<string> {
   try {
+    if (process.env.KEYCLOAK_CLIENT_SECRET) {
+      return process.env.KEYCLOAK_CLIENT_SECRET;
+    }
+
     // Return cached secret if valid
     if (cachedClientSecret && Date.now() < clientSecretExpiry) {
       return cachedClientSecret;

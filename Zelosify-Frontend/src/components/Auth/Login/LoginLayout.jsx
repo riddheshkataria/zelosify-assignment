@@ -80,8 +80,14 @@ export default function LoginLayout() {
             // Move to TOTP verification stage
             setLoginStage("totp");
           } else if (resultAction.message === "Authentication successful") {
-            // Let middleware handle the role-based redirect
-            window.location.replace("/login"); // This will trigger middleware redirect
+            const role = resultAction.user?.role;
+            if (role === "IT_VENDOR") {
+              window.location.href = "/vendor/openings";
+            } else if (role === "HIRING_MANAGER") {
+              window.location.href = "/hiring-manager/openings";
+            } else {
+              window.location.href = "/login";
+            }
           }
         } catch (err) {
           console.error("Login verification error:", err);

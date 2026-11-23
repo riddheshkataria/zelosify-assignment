@@ -135,8 +135,11 @@ const useAuth = () => {
         dispatch(closeSignoutConfirmation());
       }
 
-      // Navigate to login page
-      router.push("/user");
+      // Clear role cookie immediately
+      document.cookie = "role=; path=/; max-age=0";
+      
+      // Navigate cleanly to login page
+      window.location.href = "/login";
       return result;
     } catch (error) {
       console.error("Logout error:", error);

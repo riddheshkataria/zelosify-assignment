@@ -80,6 +80,10 @@ const CLIENT_SECRET_TTL = 3600 * 1000; // 1 hour
 
 export async function getClientSecret(adminToken: string): Promise<string> {
   try {
+    if (process.env.KEYCLOAK_CLIENT_SECRET) {
+      return process.env.KEYCLOAK_CLIENT_SECRET;
+    }
+
     if (cachedClientSecret && Date.now() < clientSecretExpiry) {
       return cachedClientSecret;
     }

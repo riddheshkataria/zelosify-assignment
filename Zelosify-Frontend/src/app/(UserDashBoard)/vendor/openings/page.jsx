@@ -117,10 +117,11 @@ export default function VendorOpeningsPage() {
             className="px-3.5 py-2.5 text-sm rounded-lg border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="">All Contract Types</option>
-            <option value="CONTRACT">Contract</option>
-            <option value="FULL_TIME">Full Time</option>
-            <option value="PART_TIME">Part Time</option>
-            <option value="HOURLY">Hourly</option>
+            <option value="C2C">C2C (Corp-to-Corp)</option>
+            <option value="W2">W2 Contract</option>
+            <option value="1099">1099 Independent</option>
+            <option value="Part-Time">Part-Time Contract</option>
+            <option value="Full-Time">Full-Time Contract</option>
           </select>
         </div>
       </div>

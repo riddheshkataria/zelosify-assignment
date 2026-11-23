@@ -43,7 +43,12 @@ export async function getVendorOpenings(req: Request, res: Response) {
     }
 
     if (contractType) {
-      where.contractType = contractType;
+      const clean = contractType.trim().replace(/_/g, " ");
+      const keyword = clean.replace(/\s*contract$/i, "").trim();
+      where.contractType = {
+        contains: keyword,
+        mode: "insensitive",
+      };
     }
 
     const [total, openings] = await Promise.all([

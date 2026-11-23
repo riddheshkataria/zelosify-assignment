@@ -25,52 +25,38 @@ export const logout = asyncHandler(
 
       // Check if this is a Keycloak user or OAuth user.
       if (user && user.provider === "KEYCLOAK") {
-        // For Keycloak users, retrieve the client secret and call Keycloak logout endpoint.
-        const adminToken = await getAdminToken();
-        const clientSecret = await getClientSecret(adminToken);
-        if (!clientSecret) {
-          console.error("Error: CLIENT_SECRET could not be retrieved.");
-          res.status(500).json({ message: "Failed to retrieve CLIENT_SECRET" });
-          return;
+        const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET || (await getClientSecret(await getAdminToken()));
+        if (clientSecret) {
+          try {
+            await axios.post(
+              `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/logout`,
+              new URLSearchParams({
+                client_id: process.env.KEYCLOAK_CLIENT_ID!,
+                client_secret: clientSecret,
+                refresh_token: refreshToken,
+              }),
+              {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                timeout: 2000,
+              }
+            );
+            console.log("Keycloak session invalidated for user.");
+          } catch (error: any) {
+            console.warn("Keycloak logout notification error (session cleared locally):", error.message);
+          }
         }
-        try {
-          await axios.post(
-            `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/logout`,
-            new URLSearchParams({
-              client_id: process.env.KEYCLOAK_CLIENT_ID!,
-              client_secret: clientSecret,
-              refresh_token: refreshToken,
-            }),
-            { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-          );
-          console.log("Keycloak session invalidated for user.");
-        } catch (error: any) {
-          // Type as 'any' for axios error
-          console.error(
-            "Keycloak logout request failed:",
-            error.response?.data || error.message
-          );
-          res.status(500).json({ message: "Error logging out of Keycloak" });
-          return;
-        }
-      } else {
-        // For OAuth users (Google/Microsoft), you may not need to call an external logout endpoint.
-        console.log("OAuth user logout: just clearing cookies.");
       }
 
-      // Clear cookies securely
-      res.clearCookie("access_token", {
+      // Clear cookies securely and reliably across environments
+      const cookieOptions = {
         httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
         path: "/",
-      });
-      res.clearCookie("refresh_token", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        path: "/",
-      });
+      };
+      res.clearCookie("access_token", cookieOptions);
+      res.clearCookie("refresh_token", cookieOptions);
+      res.clearCookie("role", { ...cookieOptions, httpOnly: false });
       console.log("Cookies cleared successfully.");
 
       res.status(200).json({ message: "Logged out successfully" });
