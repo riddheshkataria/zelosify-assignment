@@ -606,7 +606,8 @@ export default function VendorOpeningDetailPage({ params }) {
                       )}
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
