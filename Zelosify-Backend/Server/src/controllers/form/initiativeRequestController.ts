@@ -1,7 +1,8 @@
 import { Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "../../config/prisma/prisma.js"; // Ensure your Prisma client is correctly configured
-import Ajv from "ajv";
+import _Ajv from "ajv";
+const AjvClass: any = (_Ajv as any).default || _Ajv;
 import type {
   AuthenticatedRequest,
   DigitalInitiativeRequest,
@@ -12,7 +13,7 @@ import type {
 // import { sendLogToLoki } from "../../services/logger/lokiLogger.js";
 
 // Initialize AJV
-const ajv = new Ajv();
+const ajv = new AjvClass();
 // Define the JSON schema for validation with type properties and required fields
 const initiativeSchema = {
   type: "object",

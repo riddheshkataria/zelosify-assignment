@@ -1,4 +1,6 @@
-import Ajv, { type ValidateFunction } from "ajv";
+import _Ajv, { type ValidateFunction } from "ajv";
+
+const AjvClass: any = (_Ajv as any).default || _Ajv;
 
 export interface AgentRecommendationOutput {
   recommended: boolean;
@@ -23,7 +25,7 @@ export interface DeterministicScoreResult {
   finalScore: number;
 }
 
-const ajv = new Ajv({ allErrors: true, coerceTypes: true });
+const ajv = new AjvClass({ allErrors: true, coerceTypes: true });
 
 // Schema for final agent output
 const agentOutputJsonSchema = {
