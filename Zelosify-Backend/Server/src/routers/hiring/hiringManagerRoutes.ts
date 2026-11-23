@@ -22,13 +22,16 @@ router.get("/openings", getManagerOpenings as unknown as RequestHandler);
 // 2. Fetch Profiles for a specific opening
 router.get("/openings/:id/profiles", getOpeningProfiles as unknown as RequestHandler);
 
-// 3. Shortlist a candidate profile
+// 3. Shortlist a candidate profile (both /openings/:openingId/profiles/:profileId/shortlist and /profiles/:id/shortlist)
+router.post("/openings/:openingId/profiles/:profileId/shortlist", shortlistProfile as unknown as RequestHandler);
 router.post("/profiles/:id/shortlist", shortlistProfile as unknown as RequestHandler);
 
-// 4. Reject a candidate profile
+// 4. Reject a candidate profile (both /openings/:openingId/profiles/:profileId/reject and /profiles/:id/reject)
+router.post("/openings/:openingId/profiles/:profileId/reject", rejectProfile as unknown as RequestHandler);
 router.post("/profiles/:id/reject", rejectProfile as unknown as RequestHandler);
 
-// 5. Secure file preview URL
+// 5. Secure file preview URL (both /openings/:openingId/profiles/:profileId/preview and /profiles/:id/preview)
+router.get("/openings/:openingId/profiles/:profileId/preview", getProfilePreviewUrl as unknown as RequestHandler);
 router.get("/profiles/:id/preview", getProfilePreviewUrl as unknown as RequestHandler);
 
 // Legacy root vacancy check (preserved for backwards compatibility)

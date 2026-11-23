@@ -151,7 +151,8 @@ export async function shortlistProfile(req: Request, res: Response) {
   try {
     const tenantId = getTenantIdFromRequest(req);
     const userId = getUserIdFromRequest(req);
-    const profileId = parseInt(req.params.id, 10);
+    const idParam = req.params.profileId || req.params.id;
+    const profileId = parseInt(idParam, 10);
 
     if (isNaN(profileId)) {
       return res.status(400).json({ success: false, message: "Invalid profile ID" });
@@ -201,7 +202,8 @@ export async function rejectProfile(req: Request, res: Response) {
   try {
     const tenantId = getTenantIdFromRequest(req);
     const userId = getUserIdFromRequest(req);
-    const profileId = parseInt(req.params.id, 10);
+    const idParam = req.params.profileId || req.params.id;
+    const profileId = parseInt(idParam, 10);
 
     if (isNaN(profileId)) {
       return res.status(400).json({ success: false, message: "Invalid profile ID" });
@@ -251,7 +253,8 @@ export async function getProfilePreviewUrl(req: Request, res: Response) {
   try {
     const tenantId = getTenantIdFromRequest(req);
     const userId = getUserIdFromRequest(req);
-    const profileId = parseInt(req.params.id, 10);
+    const idParam = req.params.profileId || req.params.id;
+    const profileId = parseInt(idParam, 10);
 
     if (isNaN(profileId)) {
       return res.status(400).json({ success: false, message: "Invalid profile ID" });
