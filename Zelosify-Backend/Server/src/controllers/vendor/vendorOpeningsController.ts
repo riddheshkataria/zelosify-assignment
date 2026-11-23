@@ -132,8 +132,38 @@ export async function getVendorOpeningDetails(req: Request, res: Response) {
       orderBy: { submittedAt: "desc" },
     });
 
-    // Strip sensitive AI recommendation fields
-    const sanitizedProfiles = vendorProfiles.map((p) => sanitizeProfileForVendor(p));
+    // Strip sensitive AI recommendation fields and attach candidate display metadata
+    const sanitizedProfiles = vendorProfiles.map((p) => {
+      const sanitized = sanitizeProfileForVendor(p);
+
+      const meta = (p.reasoningMetadata && typeof p.reasoningMetadata === "object" && !Array.isArray(p.reasoningMetadata))
+        ? (p.reasoningMetadata as Record<string, any>)
+        : {};
+
+      const rawFileName = p.fileName || p.s3Key.split("/").pop() || "Resume.pdf";
+      const cleanCandidateName = meta.candidateName || rawFileName
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[-_](resume|cv|general|profile|final).*/i, "")
+        .replace(/[_-]/g, " ")
+        .trim() || `Candidate #${p.id}`;
+
+      const cleanCandidateEmail = meta.candidateEmail || `${cleanCandidateName.toLowerCase().replace(/\s+/g, ".")}@candidate.zelosify.com`;
+      const experienceYears = meta.experienceYears ?? opening.experienceMin ?? 3;
+      const keySkills = meta.keySkills && Array.isArray(meta.keySkills) && meta.keySkills.length > 0
+        ? meta.keySkills
+        : ["TypeScript", "Node.js", "React"];
+
+      return {
+        ...sanitized,
+        candidateName: cleanCandidateName,
+        candidateEmail: cleanCandidateEmail,
+        experienceYears,
+        keySkills,
+        resumeFilename: rawFileName,
+        createdAt: p.submittedAt,
+        submittedAt: p.submittedAt,
+      };
+    });
 
     return res.status(200).json({
       success: true,

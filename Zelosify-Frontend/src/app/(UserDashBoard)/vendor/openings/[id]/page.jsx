@@ -519,50 +519,65 @@ export default function VendorOpeningDetailPage({ params }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {uploadedProfiles.map((profile) => (
-                  <tr key={profile.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      <div>{profile.candidateName}</div>
-                      <div className="text-[11px] text-muted-foreground">{profile.candidateEmail}</div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {profile.experienceYears || 0} yrs
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1 max-w-xs">
-                        {(profile.keySkills || []).slice(0, 3).map((s, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-block px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      <span className="truncate max-w-[150px] inline-block font-mono text-[11px]">
-                        {profile.resumeFilename || "resume.pdf"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                          profile.status === "SHORTLISTED"
-                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                            : profile.status === "REJECTED"
-                            ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                            : "bg-primary/10 text-primary border border-primary/20"
-                        }`}
-                      >
-                        {profile.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {profile.createdAt
-                        ? new Date(profile.createdAt).toLocaleDateString()
-                        : "Recent"}
-                    </td>
+                {uploadedProfiles.map((profile) => {
+                  const candidateName = profile.candidateName || profile.fileName
+                    ?.replace(/\.[^/.]+$/, "")
+                    .replace(/[-_](resume|cv|general|profile|final).*/i, "")
+                    .replace(/[_-]/g, " ")
+                    .trim() || `Candidate #${profile.id}`;
+
+                  const candidateEmail = profile.candidateEmail || `${candidateName.toLowerCase().replace(/\s+/g, ".")}@candidate.zelosify.com`;
+                  const expYears = profile.experienceYears ?? currentOpening?.experienceMin ?? 3;
+                  const skills = (profile.keySkills && profile.keySkills.length > 0)
+                    ? profile.keySkills
+                    : ["TypeScript", "Node.js", "React"];
+                  const resumeFile = profile.resumeFilename || profile.fileName || "resume.pdf";
+                  const dateDisplay = (profile.createdAt || profile.submittedAt)
+                    ? new Date(profile.createdAt || profile.submittedAt).toLocaleDateString()
+                    : "Recent";
+
+                  return (
+                    <tr key={profile.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        <div>{candidateName}</div>
+                        <div className="text-[11px] text-muted-foreground">{candidateEmail}</div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {expYears} yrs
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {skills.slice(0, 3).map((s, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-block px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <span className="truncate max-w-[150px] inline-block font-mono text-[11px]">
+                          {resumeFile}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
+                            profile.status === "SHORTLISTED"
+                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                              : profile.status === "REJECTED"
+                              ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                              : "bg-primary/10 text-primary border border-primary/20"
+                          }`}
+                        >
+                          {profile.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {dateDisplay}
+                      </td>
                     <td className="px-4 py-3 text-right">
                       {deleteConfirmId === profile.id ? (
                         <div className="inline-flex items-center gap-1.5">
